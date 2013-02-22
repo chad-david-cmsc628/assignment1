@@ -1,11 +1,27 @@
 package com.example.assignment1;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.List;
+
+import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
 import android.provider.MediaStore;
-import android.app.Activity;
+import android.annotation.SuppressLint;
 import android.app.ListActivity;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
 import android.graphics.Bitmap;
+import android.util.Log;
 import android.view.Menu;
 import android.view.View;
 import android.view.ViewGroup;
@@ -14,24 +30,33 @@ import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.Toast;
 
-public class MainActivity extends ListActivity {
-
+@SuppressLint("SimpleDateFormat") public class MainActivity extends ListActivity {
+	
+	/* Lecture Code Variables */
 	private int CAMERA_REQUEST_CODE = 1;
 	private int GALLERY_REQUEST_CODE = 2;
 	String [] classes = {"Camera", "View"};
+	
+	/* Constants and Counter for Image Name */
+	private static final String JPEG_FILE_SUFFIX = ".jpeg";
+	private static final String JPEG_FILE_PREFIX = "image";
+	private static int pictureNumber = 0;
+	
+	/* Directory File Path to Save to and Given Image Path */
+	private String mCurrentPhotoPath;
+	private final File albumDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), "appPictures/");
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		//setContentView(R.layout.activity_main);
 
-		ArrayAdapter myAdapter = new ArrayAdapter<String>(MainActivity.this,
+		ArrayAdapter<String> myAdapter = new ArrayAdapter<String>(MainActivity.this,
 				android.R.layout.simple_list_item_1, classes);
 				
 		//ArrayAdapter myAdapter = new ArrayAdapter<String>(MainActivity.this, R.layout.activity_main, R.id.textLabel, classes);
 		
 		this.setListAdapter(myAdapter);
-		
 	}
 	
 
@@ -43,8 +68,12 @@ public class MainActivity extends ListActivity {
 		String myClass = classes[position];
 		if(myClass.compareTo("Camera") == 0) 
 		{
+			PackageManager packageManager = getPackageManager();
 			Intent cameraIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-			startActivityForResult(cameraIntent, CAMERA_REQUEST_CODE);
+			List<ResolveInfo> activities = packageManager.queryIntentActivities(cameraIntent,  0);
+			if(activities.size() > 0) {
+				startActivityForResult(cameraIntent, CAMERA_REQUEST_CODE);
+			}
 		}
 		else if (myClass.compareTo("View") == 0)
 		{
@@ -52,8 +81,6 @@ public class MainActivity extends ListActivity {
 			startActivity(galleryIntent);
 		}
 	}
-
-
 
 	@Override
 	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -64,23 +91,67 @@ public class MainActivity extends ListActivity {
 		{
 			if(resultCode == RESULT_OK)
 			{
+				/* Guided Lecture Code */
 				Bundle extra = data.getExtras();
 				Bitmap image = (Bitmap) extra.get("data");
 				
-				View toastView = getLayoutInflater().inflate(R.layout.toast_layout, (ViewGroup) 
-						findViewById(R.id.imageView1));
-				
-				ImageView view = (ImageView) findViewById(R.id.imageView1);
+				View toastView = getLayoutInflater().inflate(R.layout.toast_layout, (ViewGroup)
+					findViewById(R.id.imageView)); // This was R.id.toast_layout
+			
+				ImageView view = (ImageView) toastView.findViewById(R.id.imageView);
 				view.setImageBitmap(image);
+
+				Toast mytoast = new Toast(MainActivity.this);
+				mytoast.setDuration(Toast.LENGTH_LONG);
+				mytoast.setView(toastView);
+				mytoast.show();
 				
-				Toast myToast = new Toast(MainActivity.this);
-				myToast.setDuration(Toast.LENGTH_LONG);
-				myToast.setView(toastView);
-				myToast.show();
+				/* Create an Image File with correct associated directory */
+				try {
+					File newImage = createImageFile();
+					data.putExtra(MediaStore.EXTRA_OUTPUT, Uri.fromFile(newImage));
+					galleryAddPic(data);
+				} catch (IOException e) {
+					System.out.println("IO Exception");
+					e.printStackTrace();
+				}
+				
+				System.out.println(data.getExtras());
+					
+				/* Add the Picture to the Gallery */
+				
 			}
+		}
+		else if(requestCode == GALLERY_REQUEST_CODE) {
+			
 		}
 	}
 
+	private File createImageFile() throws IOException {
+	    // Create an image file name
+	    String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+	    String imageFileName = JPEG_FILE_PREFIX + String.format("%03d", pictureNumber) + "_" + timeStamp + "_";
+	    File image = File.createTempFile(imageFileName, JPEG_FILE_SUFFIX, albumDir);
+	    pictureNumber++;
+	    mCurrentPhotoPath = image.getAbsolutePath();
+	    System.out.println(mCurrentPhotoPath);
+	    return image;
+	}
+	
+	private void galleryAddPic(Intent data_) throws IOException {
+	    Intent mediaScanIntent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
+	    mediaScanIntent.putExtra("data", data_.getExtras());
+	    File f = new File(mCurrentPhotoPath);
+	    FileOutputStream fOut = new FileOutputStream(f);
+	    Bundle b = data_.getExtras();
+	    Bitmap image = (Bitmap) b.get("data");
+	    image.compress(Bitmap.CompressFormat.JPEG, 85, fOut);
+	    fOut.flush();
+	    fOut.close();
+	    Uri contentUri = Uri.fromFile(f);
+	    mediaScanIntent.setData(contentUri);
+	    this.sendBroadcast(mediaScanIntent);
+	}
 
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
