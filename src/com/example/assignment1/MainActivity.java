@@ -16,7 +16,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.annotation.SuppressLint;
-import android.app.ListActivity;
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -26,38 +26,38 @@ import android.graphics.Path;
 import android.util.Log;
 import android.view.Menu;
 import android.view.View;
+import android.view.View.OnClickListener;
 import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.ImageView;
-import android.widget.ListView;
 import android.widget.Toast;
 
-@SuppressLint("SimpleDateFormat") public class MainActivity extends ListActivity {
+@SuppressLint("SimpleDateFormat") public class MainActivity extends Activity implements OnClickListener{
 	
 	/* Lecture Code Variables */
 	private int CAMERA_REQUEST_CODE = 1;
 	private int GALLERY_REQUEST_CODE = 2;
-	String [] classes = {"Camera", "View"};
 	
 	/* Constants and Counter for Image Name */
 	private static final String JPEG_FILE_SUFFIX = ".jpeg";
 	private static final String JPEG_FILE_PREFIX = "image";
 	private static final String TXT_FILE_PREFIX = ".txt";
 	private int imageNum;
-	
 	private static final String imageCounterFile = "imageCounter" + TXT_FILE_PREFIX;
 	
 	/* Directory File Path to Save to and Given Image Path */
 	private final File albumDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), "CameraApp");
 	
+	/* Buttons */
+	private Button cameraButton, galleryButton;
+	
+	/* Text Labels */
+	private ImageView logo;
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		//setContentView(R.layout.activity_main);
-
-		ArrayAdapter<String> myAdapter = new ArrayAdapter<String>(MainActivity.this,
-				android.R.layout.simple_list_item_1, classes);
+		setContentView(R.layout.activity_main);
 				
 		try 
 		{
@@ -70,19 +70,21 @@ import android.widget.Toast;
 			e.printStackTrace();
 		}
 		
-		//ArrayAdapter myAdapter = new ArrayAdapter<String>(MainActivity.this, R.layout.activity_main, R.id.textLabel, classes);
+		cameraButton = (Button) findViewById(R.id.cameraButton);
+		galleryButton = (Button) findViewById(R.id.galleryButton);
 		
-		this.setListAdapter(myAdapter);
+		cameraButton.setOnClickListener(this);
+		galleryButton.setOnClickListener(this);
+		
+		logo = (ImageView) findViewById(R.id.logo);
+		logo.setImageResource(R.raw.photo_gallery_logo);
 	}
 	
-
 	@Override
-	protected void onListItemClick(ListView l, View v, int position, long id) {
-		// TODO Auto-generated method stub
-		super.onListItemClick(l, v, position, id);
-		
-		String myClass = classes[position];
-		if(myClass.compareTo("Camera") == 0) 
+	public void onClick(View v_) {
+		Button buttonPressed = (Button) v_;
+		System.out.println(buttonPressed.getText());
+		if(buttonPressed.getText().equals("Take A Picture")) 
 		{
 			PackageManager packageManager = getPackageManager();
 			Intent cameraIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
@@ -91,7 +93,7 @@ import android.widget.Toast;
 				startActivityForResult(cameraIntent, CAMERA_REQUEST_CODE);
 			}
 		}
-		else if (myClass.compareTo("View") == 0)
+		else if (buttonPressed.getText().equals("View Gallery"))
 		{
 			Intent galleryIntent = new Intent("com.example.assignment1.GalleryActivity");
 			galleryIntent.putExtra("imageDirectoryPath", albumDir.getAbsolutePath().toString());
@@ -101,7 +103,6 @@ import android.widget.Toast;
 
 	@Override
 	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-		// TODO Auto-generated method stub
 		super.onActivityResult(requestCode, resultCode, data);
 		
 		if(requestCode == CAMERA_REQUEST_CODE)
@@ -113,7 +114,7 @@ import android.widget.Toast;
 				Bitmap image = (Bitmap) extra.get("data");
 				
 				View toastView = getLayoutInflater().inflate(R.layout.toast_layout, (ViewGroup)
-				findViewById(R.id.imageView1)); // This was R.id.toast_layout
+				findViewById(R.id.imageView1));
 			
 				ImageView view = (ImageView) toastView.findViewById(R.id.imageView1);
 				view.setImageBitmap(image);
