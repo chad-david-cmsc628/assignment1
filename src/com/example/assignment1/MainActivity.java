@@ -17,10 +17,12 @@ import android.os.Environment;
 import android.provider.MediaStore;
 import android.annotation.SuppressLint;
 import android.app.ListActivity;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.graphics.Bitmap;
+import android.graphics.Path;
 import android.util.Log;
 import android.view.Menu;
 import android.view.View;
@@ -40,11 +42,14 @@ import android.widget.Toast;
 	/* Constants and Counter for Image Name */
 	private static final String JPEG_FILE_SUFFIX = ".jpeg";
 	private static final String JPEG_FILE_PREFIX = "image";
-	private static int pictureNumber = 0;
+	private static final String TXT_FILE_PREFIX = ".txt";
+	private int imageNum;
+	
+	private static final String imageCounterFile = "imageCounter" + TXT_FILE_PREFIX;
 	
 	/* Directory File Path to Save to and Given Image Path */
-	private String mCurrentPhotoPath;
-	private final File albumDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), "appPictures/");
+	private final File albumDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), "CameraApp");
+	
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -54,6 +59,17 @@ import android.widget.Toast;
 		ArrayAdapter<String> myAdapter = new ArrayAdapter<String>(MainActivity.this,
 				android.R.layout.simple_list_item_1, classes);
 				
+		try 
+		{
+			imageNum = getPictureNum();
+			System.out.println("Image num: " + imageNum);
+		}
+		catch (IOException e) 
+		{
+			imageNum = 0;
+			e.printStackTrace();
+		}
+		
 		//ArrayAdapter myAdapter = new ArrayAdapter<String>(MainActivity.this, R.layout.activity_main, R.id.textLabel, classes);
 		
 		this.setListAdapter(myAdapter);
@@ -78,7 +94,8 @@ import android.widget.Toast;
 		else if (myClass.compareTo("View") == 0)
 		{
 			Intent galleryIntent = new Intent("com.example.assignment1.GalleryActivity");
-			startActivity(galleryIntent);
+			galleryIntent.putExtra("imageDirectoryPath", albumDir.getAbsolutePath().toString());
+			startActivityForResult(galleryIntent, GALLERY_REQUEST_CODE);
 		}
 	}
 
@@ -96,9 +113,9 @@ import android.widget.Toast;
 				Bitmap image = (Bitmap) extra.get("data");
 				
 				View toastView = getLayoutInflater().inflate(R.layout.toast_layout, (ViewGroup)
-					findViewById(R.id.imageView)); // This was R.id.toast_layout
+				findViewById(R.id.imageView1)); // This was R.id.toast_layout
 			
-				ImageView view = (ImageView) toastView.findViewById(R.id.imageView);
+				ImageView view = (ImageView) toastView.findViewById(R.id.imageView1);
 				view.setImageBitmap(image);
 
 				Toast mytoast = new Toast(MainActivity.this);
@@ -109,17 +126,11 @@ import android.widget.Toast;
 				/* Create an Image File with correct associated directory */
 				try {
 					File newImage = createImageFile();
-					data.putExtra(MediaStore.EXTRA_OUTPUT, Uri.fromFile(newImage));
-					galleryAddPic(data);
+					addImageToGallery(data, newImage);
 				} catch (IOException e) {
 					System.out.println("IO Exception");
 					e.printStackTrace();
 				}
-				
-				System.out.println(data.getExtras());
-					
-				/* Add the Picture to the Gallery */
-				
 			}
 		}
 		else if(requestCode == GALLERY_REQUEST_CODE) {
@@ -128,27 +139,35 @@ import android.widget.Toast;
 	}
 
 	private File createImageFile() throws IOException {
-	    // Create an image file name
-	    String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
-	    String imageFileName = JPEG_FILE_PREFIX + String.format("%03d", pictureNumber) + "_" + timeStamp + "_";
-	    File image = File.createTempFile(imageFileName, JPEG_FILE_SUFFIX, albumDir);
-	    pictureNumber++;
-	    mCurrentPhotoPath = image.getAbsolutePath();
-	    System.out.println(mCurrentPhotoPath);
+	    // Create an image file instance
+	    String imageFileName = albumDir + File.separator + JPEG_FILE_PREFIX + "_" + String.format("%03d", imageNum) + JPEG_FILE_SUFFIX;
+	    File image = new File(imageFileName);
+	    incrementPictureNum();
 	    return image;
 	}
 	
-	private void galleryAddPic(Intent data_) throws IOException {
+	private void incrementPictureNum() throws FileNotFoundException, IOException {
+		FileOutputStream imgCounterOutStream = openFileOutput(imageCounterFile, Context.MODE_PRIVATE);
+		imageNum++;
+		imgCounterOutStream.write(imageNum);
+	}
+	
+	private int getPictureNum() throws IOException {
+		FileInputStream imgCounterInStream = openFileInput(imageCounterFile);
+		imageNum = imgCounterInStream.read();
+		return imageNum;
+	}
+	
+	private void addImageToGallery(Intent data_, File image_) throws IOException {
 	    Intent mediaScanIntent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
 	    mediaScanIntent.putExtra("data", data_.getExtras());
-	    File f = new File(mCurrentPhotoPath);
-	    FileOutputStream fOut = new FileOutputStream(f);
+	    FileOutputStream fOut = new FileOutputStream(image_);
 	    Bundle b = data_.getExtras();
 	    Bitmap image = (Bitmap) b.get("data");
 	    image.compress(Bitmap.CompressFormat.JPEG, 85, fOut);
 	    fOut.flush();
 	    fOut.close();
-	    Uri contentUri = Uri.fromFile(f);
+	    Uri contentUri = Uri.fromFile(image_);
 	    mediaScanIntent.setData(contentUri);
 	    this.sendBroadcast(mediaScanIntent);
 	}
