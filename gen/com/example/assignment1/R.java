@@ -15,28 +15,31 @@ public final class R {
     }
     public static final class id {
         public static final int cameraButton=0x7f080001;
+        public static final int delete_notification=0x7f080004;
         public static final int galleryButton=0x7f080002;
-        public static final int imageView1=0x7f080004;
+        public static final int imageView1=0x7f080005;
         public static final int logo=0x7f080000;
-        public static final int menu_settings=0x7f080005;
+        public static final int menu_settings=0x7f080006;
         public static final int textLabel=0x7f080003;
     }
     public static final class layout {
         public static final int activity_main=0x7f030000;
         public static final int gallery_layout=0x7f030001;
-        public static final int toast_layout=0x7f030002;
+        public static final int image_delete_toast=0x7f030002;
+        public static final int toast_layout=0x7f030003;
     }
     public static final class menu {
         public static final int activity_main=0x7f070000;
     }
     public static final class raw {
-        public static final int photo_gallery_logo=0x7f040000;
+        public static final int delete_message=0x7f040000;
+        public static final int photo_gallery_logo=0x7f040001;
     }
     public static final class string {
         public static final int app_name=0x7f050000;
         public static final int camera_button=0x7f050001;
-        public static final int delete_image=0x7f050005;
         public static final int gallery_button=0x7f050002;
+        public static final int image_deleted_text=0x7f050005;
         public static final int logo_description=0x7f050004;
         public static final int menu_settings=0x7f050003;
     }

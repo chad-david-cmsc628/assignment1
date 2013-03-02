@@ -49,7 +49,7 @@ import android.widget.Toast;
 	private final File albumDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), "CameraApp");
 	
 	/* Buttons */
-	private Button cameraButton, galleryButton;
+	private Button cameraButton, galleryButton, buttonPressed;
 	
 	/* Text Labels */
 	private ImageView logo;
@@ -62,7 +62,6 @@ import android.widget.Toast;
 		try 
 		{
 			imageNum = getPictureNum();
-			System.out.println("Image num: " + imageNum);
 		}
 		catch (IOException e) 
 		{
@@ -82,8 +81,7 @@ import android.widget.Toast;
 	
 	@Override
 	public void onClick(View v_) {
-		Button buttonPressed = (Button) v_;
-		System.out.println(buttonPressed.getText());
+		buttonPressed = (Button) v_;
 		if(buttonPressed.getText().equals("Take A Picture")) 
 		{
 			PackageManager packageManager = getPackageManager();
