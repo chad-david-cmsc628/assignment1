@@ -9,17 +9,23 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
 import android.os.Bundle;
+import android.text.InputType;
 import android.view.Gravity;
+import android.view.KeyEvent;
 import android.view.View;
 import android.view.View.OnClickListener;
+import android.view.inputmethod.EditorInfo;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.PopupWindow;
 import android.widget.PopupWindow.OnDismissListener;
+import android.widget.TextView;
+import android.widget.TextView.OnEditorActionListener;
 import android.widget.Toast;
 
 public class GalleryActivity extends ListActivity implements OnClickListener, OnDismissListener {
@@ -27,20 +33,23 @@ public class GalleryActivity extends ListActivity implements OnClickListener, On
 	private String [] imageList;
 	private File imageDirectory;
 	private String imageDirectoryPath_;
-	private Button deleteImageButton, closeImagePopup, popupButtonPressed;
+	private Button deleteImageButton, closeImagePopup, renameImageButton, popupButtonPressed;
+	private String popupButtonText;
 	private LinearLayout imagePopupContainer;
 	private LinearLayout buttonContainer;
 	private PopupWindow imagePopupWindow;
 	private ImageView selectedImage;
-	private int deleteImagePos;
-	private String deleteImagePath;
+	private int currentImagePos;
+	private String currentImagePath;
 	private Object deleteImageObject;
 	private File img;
 	private File deleteImageFile;
-	private ArrayAdapter galleryAdapter;
+	private GalleryAdapter myAdapter; 
 	private ArrayList<String>images;
 	private ImageView deleteMessageView;
 	private Bundle extras;
+	private EditText editImageText;
+	private File renamedFile;
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -55,8 +64,8 @@ public class GalleryActivity extends ListActivity implements OnClickListener, On
 		images = new ArrayList<String>();
 		images.addAll(Arrays.asList(imageList));
 		
-		galleryAdapter = new ArrayAdapter(GalleryActivity.this, R.layout.gallery_layout, R.id.textLabel, images);
-		this.setListAdapter(galleryAdapter);
+		myAdapter = new GalleryAdapter(GalleryActivity.this, R.layout.gallery_layout, R.id.textLabel, images);
+		this.setListAdapter(myAdapter);
 		
 		/* Create image popup and button containers (views) */
 		imagePopupContainer = new LinearLayout(this);
@@ -67,19 +76,28 @@ public class GalleryActivity extends ListActivity implements OnClickListener, On
 		/* Create buttons for image popup window */
 		deleteImageButton = new Button(this);
 		deleteImageButton.setText("Delete Image");
-		deleteImageButton.setWidth(300);
+		deleteImageButton.setWidth(200);
 		deleteImageButton.setHeight(100);
 		deleteImageButton.setOnClickListener(this);
 		
+		renameImageButton = new Button(this);
+		renameImageButton.setText("Rename Image");
+		renameImageButton.setWidth(200);
+		renameImageButton.setHeight(100);
+		renameImageButton.setOnClickListener(this);
+		
 		closeImagePopup = new Button(this);
 		closeImagePopup.setText("Close");
-		closeImagePopup.setWidth(300);
+		closeImagePopup.setWidth(200);
 		closeImagePopup.setHeight(100);
 		closeImagePopup.setOnClickListener(this);
 		
 		/* Add popup buttons to a container */
 		buttonContainer.addView((View) closeImagePopup);
+		buttonContainer.addView((View) renameImageButton);
 		buttonContainer.addView((View) deleteImageButton);
+		
+		editImageText = new EditText(GalleryActivity.this);
 	}
 
 	@Override
@@ -87,20 +105,42 @@ public class GalleryActivity extends ListActivity implements OnClickListener, On
 		// TODO Auto-generated method stub
 		super.onListItemClick(l, v, position, id);
 		
-		deleteImagePos = position;
-		deleteImagePath = imageDirectoryPath_ + File.separator + imageList[position];
+		currentImagePos = position;
+		currentImagePath = imageDirectoryPath_ + File.separator + imageList[position];
+		renamedFile = new File(currentImagePath);
 		
-		img = new File(deleteImagePath);
+		img = new File(currentImagePath);
 		
 		if (img.exists()) {
 			Bitmap image = BitmapFactory.decodeFile(img.getAbsolutePath());
-			System.out.println("Width: " + image.getWidth() + " Height: " + image.getHeight());
 			image = scaleImage(image, 600, 600);
 			
 			selectedImage = new ImageView(this);
 			selectedImage.setImageBitmap(image);
 			
+			editImageText.setText(imageList[position]);
+			editImageText.setFocusable(false);
+			editImageText.setInputType(InputType.TYPE_TEXT_VARIATION_WEB_EDIT_TEXT);
+			editImageText.setOnEditorActionListener(new OnEditorActionListener () {
+				
+				@Override
+				public boolean onEditorAction(TextView view, int action,
+						KeyEvent arg2event) {
+					if (action == EditorInfo.IME_ACTION_DONE) {
+						//myAdapter.setListItem(0, view.getText().toString());
+						view.setFocusable(false);
+						renamedFile.renameTo(new File(imageDirectoryPath_ + File.separator + view.getText().toString()));
+						System.out.println("renaming file");
+						//return true;
+					}
+					return false;
+				}
+			});
+			editImageText.setImeOptions(EditorInfo.IME_ACTION_DONE);
+			editImageText.setImeActionLabel("Done", EditorInfo.IME_ACTION_DONE);
+			
 			imagePopupContainer.addView(selectedImage);
+			imagePopupContainer.addView(editImageText);
 			imagePopupContainer.addView(buttonContainer);
 			
 			imagePopupWindow = new PopupWindow(imagePopupContainer, 600, 900, true);
@@ -121,25 +161,25 @@ public class GalleryActivity extends ListActivity implements OnClickListener, On
 		matrix.postScale(newWidth/width, newHeight/height);
 		
 		return Bitmap.createBitmap(image_, 0, 0, width, height, matrix, true);
-		
 	}
 
 	@Override
 	public void onClick(View v) {
 		popupButtonPressed = (Button) v;
+		popupButtonText = popupButtonPressed.getText().toString();
 		
-		if (popupButtonPressed.getText().equals("Close")) {
+		if (popupButtonText.equals("Close")) {
 			imagePopupWindow.dismiss();
 		}
-		else if (popupButtonPressed.getText().equals("Delete Image")) {
-			deleteImageObject = galleryAdapter.getItem(deleteImagePos);			
+		else if (popupButtonText.equals("Delete Image")) {
+			deleteImageObject = myAdapter.getItem(currentImagePos);			
 			deleteImageFile = new File(imageDirectoryPath_ + File.separator + deleteImageObject.toString());
 
 			/*  If image deletion is successful, remove it from the list ArrayAdapter
 			 *  and show the confirmation toast view  
 			 */
 			if (deleteImageFile.delete() == true) {
-				galleryAdapter.remove(deleteImageObject);
+				myAdapter.remove(deleteImageObject.toString());
 				
 				deleteMessageView = new ImageView(this);
 				deleteMessageView.setImageResource(R.raw.delete_message);
@@ -150,6 +190,10 @@ public class GalleryActivity extends ListActivity implements OnClickListener, On
 				deleteConfirmation.show();
 			}
 		}
+		else if (popupButtonText.equals("Rename Image")) {
+			editImageText.setFocusableInTouchMode(true);
+			editImageText.setFocusable(true);
+		}
 	}
 
 	@Override
@@ -158,14 +202,15 @@ public class GalleryActivity extends ListActivity implements OnClickListener, On
 		 *  thrown when trying to add views that already have a parent
 		 */
 		imagePopupContainer.removeView(selectedImage);
+		imagePopupContainer.removeView(editImageText);
 		imagePopupContainer.removeView(buttonContainer);
 		
 		/*  Refresh ArrayAdapter so we won't click on a list item that still references a previously
 		 *  deleted image 
 		 */
 		imageList = imageDirectory.list();
-		galleryAdapter.clear();
-		galleryAdapter.addAll(imageList);
-		galleryAdapter.notifyDataSetChanged();
+		myAdapter.clear();
+		myAdapter.addAll(imageList);
+		myAdapter.notifyDataSetChanged();
 	}
 }
