@@ -4,13 +4,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.List;
-
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
@@ -22,8 +17,6 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.graphics.Bitmap;
-import android.graphics.Path;
-import android.util.Log;
 import android.view.Menu;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -34,24 +27,24 @@ import android.widget.Toast;
 
 @SuppressLint("SimpleDateFormat") public class MainActivity extends Activity implements OnClickListener{
 	
-	/* Lecture Code Variables */
+	// Lecture Code Variables 
 	private int CAMERA_REQUEST_CODE = 1;
-	private int GALLERY_REQUEST_CODE = 2;
+	//private int GALLERY_REQUEST_CODE = 2;
 	
-	/* Constants and Counter for Image Name */
+	// Constants and Counter for Image Name
 	private static final String JPEG_FILE_SUFFIX = ".jpeg";
 	private static final String JPEG_FILE_PREFIX = "image";
 	private static final String TXT_FILE_PREFIX = ".txt";
 	private int imageNum;
 	private static final String imageCounterFile = "imageCounter" + TXT_FILE_PREFIX;
 	
-	/* Directory File Path to Save to and Given Image Path */
+	// Directory File Path to Save to and Given Image Path
 	private final File albumDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), "CameraApp");
 	
-	/* Buttons */
+	// Buttons
 	private Button cameraButton, galleryButton, buttonPressed;
 	
-	/* Text Labels */
+	// Text Labels
 	private ImageView logo;
 	
 	@Override
@@ -59,6 +52,8 @@ import android.widget.Toast;
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 				
+		// Retrieves the last incremented image counter so the image numbers won't restart at 0 every time
+		// the application is destroyed and re-created
 		try 
 		{
 			imageNum = getPictureNum();
@@ -77,9 +72,13 @@ import android.widget.Toast;
 		
 		logo = (ImageView) findViewById(R.id.logo);
 		logo.setImageResource(R.raw.photo_gallery_logo);
+		
+		if (!albumDir.exists()) {
+			albumDir.mkdir();
+		}
 	}
 	
-	@Override
+	// On-click listener for the main activity buttons
 	public void onClick(View v_) {
 		buttonPressed = (Button) v_;
 		if(buttonPressed.getText().equals("Take A Picture")) 
@@ -94,12 +93,12 @@ import android.widget.Toast;
 		else if (buttonPressed.getText().equals("View Gallery"))
 		{
 			Intent galleryIntent = new Intent("com.example.assignment1.GalleryActivity");
-			galleryIntent.putExtra("imageDirectoryPath", albumDir.getAbsolutePath().toString());
-			startActivityForResult(galleryIntent, GALLERY_REQUEST_CODE);
+			galleryIntent.putExtra("imageDirectoryPath", albumDir.getAbsolutePath());
+			startActivity(galleryIntent);
 		}
 	}
 
-	@Override
+	// A callback function for when the camera application has finished, returning a resulting image
 	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 		super.onActivityResult(requestCode, resultCode, data);
 		
@@ -107,7 +106,7 @@ import android.widget.Toast;
 		{
 			if(resultCode == RESULT_OK)
 			{
-				/* Guided Lecture Code */
+				// Guided Lecture Code
 				Bundle extra = data.getExtras();
 				Bitmap image = (Bitmap) extra.get("data");
 				
@@ -122,7 +121,7 @@ import android.widget.Toast;
 				mytoast.setView(toastView);
 				mytoast.show();
 				
-				/* Create an Image File with correct associated directory */
+				// Create a file for the image that was captured in the camera activity
 				try {
 					File newImage = createImageFile();
 					addImageToGallery(data, newImage);
@@ -132,11 +131,9 @@ import android.widget.Toast;
 				}
 			}
 		}
-		else if(requestCode == GALLERY_REQUEST_CODE) {
-			
-		}
 	}
 
+	// Creates the file that will store the contents of the image that was captured
 	private File createImageFile() throws IOException {
 	    // Create an image file instance
 	    String imageFileName = albumDir + File.separator + JPEG_FILE_PREFIX + "_" + String.format("%03d", imageNum) + JPEG_FILE_SUFFIX;
@@ -145,21 +142,23 @@ import android.widget.Toast;
 	    return image;
 	}
 	
+	// Increments the counter used to create unique image file names
 	private void incrementPictureNum() throws FileNotFoundException, IOException {
 		FileOutputStream imgCounterOutStream = openFileOutput(imageCounterFile, Context.MODE_PRIVATE);
 		imageNum++;
 		imgCounterOutStream.write(imageNum);
 	}
 	
+	// Retrieves the image counter from a file located in internal storage
 	private int getPictureNum() throws IOException {
 		FileInputStream imgCounterInStream = openFileInput(imageCounterFile);
 		imageNum = imgCounterInStream.read();
 		return imageNum;
 	}
 	
+	// Writes the image to a file in public external storage
 	private void addImageToGallery(Intent data_, File image_) throws IOException {
 	    Intent mediaScanIntent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
-	    mediaScanIntent.putExtra("data", data_.getExtras());
 	    FileOutputStream fOut = new FileOutputStream(image_);
 	    Bundle b = data_.getExtras();
 	    Bitmap image = (Bitmap) b.get("data");
@@ -171,7 +170,6 @@ import android.widget.Toast;
 	    this.sendBroadcast(mediaScanIntent);
 	}
 
-	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
 		// Inflate the menu; this adds items to the action bar if it is present.
 		getMenuInflater().inflate(R.menu.activity_main, menu);

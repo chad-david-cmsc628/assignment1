@@ -3,7 +3,6 @@ package com.example.assignment1;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
-
 import android.app.ListActivity;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -15,8 +14,6 @@ import android.view.KeyEvent;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.inputmethod.EditorInfo;
-import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
@@ -30,6 +27,7 @@ import android.widget.Toast;
 
 public class GalleryActivity extends ListActivity implements OnClickListener, OnDismissListener {
 
+	// Declare variables
 	private String [] imageList;
 	private File imageDirectory;
 	private String imageDirectoryPath_;
@@ -53,10 +51,9 @@ public class GalleryActivity extends ListActivity implements OnClickListener, On
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
-		// TODO Auto-generated method stub
 		super.onCreate(savedInstanceState);
 		
-		/* Get path of the previously taken image, as well as the list of image files */
+		// Get path of the previously taken image, as well as the list of image files
 		extras = getIntent().getExtras();
 		imageDirectoryPath_ = extras.getString("imageDirectoryPath");
 		imageDirectory = new File(imageDirectoryPath_);
@@ -64,16 +61,17 @@ public class GalleryActivity extends ListActivity implements OnClickListener, On
 		images = new ArrayList<String>();
 		images.addAll(Arrays.asList(imageList));
 		
+		// Instantiate GalleryAdapter object and use it as the ArrayAdapter for the ListActivity layout
 		myAdapter = new GalleryAdapter(GalleryActivity.this, R.layout.gallery_layout, R.id.textLabel, images);
 		this.setListAdapter(myAdapter);
 		
-		/* Create image popup and button containers (views) */
+		// Create containers for the image and buttons on the popup
 		imagePopupContainer = new LinearLayout(this);
 		imagePopupContainer.setOrientation(LinearLayout.VERTICAL);
 		buttonContainer = new LinearLayout(this);
 		buttonContainer.setOrientation(LinearLayout.HORIZONTAL);
 		
-		/* Create buttons for image popup window */
+		// Create buttons for image popup window
 		deleteImageButton = new Button(this);
 		deleteImageButton.setText("Delete Image");
 		deleteImageButton.setWidth(200);
@@ -92,25 +90,27 @@ public class GalleryActivity extends ListActivity implements OnClickListener, On
 		closeImagePopup.setHeight(100);
 		closeImagePopup.setOnClickListener(this);
 		
-		/* Add popup buttons to a container */
+		// Add popup buttons to button container
 		buttonContainer.addView((View) closeImagePopup);
 		buttonContainer.addView((View) renameImageButton);
 		buttonContainer.addView((View) deleteImageButton);
 		
+		// Instantiate an EditText object that will be used to rename a selected image
 		editImageText = new EditText(GalleryActivity.this);
 	}
 
 	@Override
 	protected void onListItemClick(ListView l, View v, int position, long id) {
-		// TODO Auto-generated method stub
 		super.onListItemClick(l, v, position, id);
 		
+		// Get position of the currently selected image name in the GalleryAdapter object
 		currentImagePos = position;
 		currentImagePath = imageDirectoryPath_ + File.separator + imageList[position];
 		renamedFile = new File(currentImagePath);
 		
 		img = new File(currentImagePath);
 		
+		// Instantiate and display the image popup window, only if the selected image exists
 		if (img.exists()) {
 			Bitmap image = BitmapFactory.decodeFile(img.getAbsolutePath());
 			image = scaleImage(image, 600, 600);
@@ -123,32 +123,33 @@ public class GalleryActivity extends ListActivity implements OnClickListener, On
 			editImageText.setInputType(InputType.TYPE_TEXT_VARIATION_WEB_EDIT_TEXT);
 			editImageText.setOnEditorActionListener(new OnEditorActionListener () {
 				
-				@Override
+				// Renames the selected image file whenever the user is done editing the EditText input field
 				public boolean onEditorAction(TextView view, int action,
 						KeyEvent arg2event) {
 					if (action == EditorInfo.IME_ACTION_DONE) {
-						//myAdapter.setListItem(0, view.getText().toString());
 						view.setFocusable(false);
 						renamedFile.renameTo(new File(imageDirectoryPath_ + File.separator + view.getText().toString()));
-						System.out.println("renaming file");
-						//return true;
 					}
 					return false;
 				}
 			});
+			
 			editImageText.setImeOptions(EditorInfo.IME_ACTION_DONE);
 			editImageText.setImeActionLabel("Done", EditorInfo.IME_ACTION_DONE);
 			
+			// Add views to the image popup layout
 			imagePopupContainer.addView(selectedImage);
 			imagePopupContainer.addView(editImageText);
 			imagePopupContainer.addView(buttonContainer);
 			
+			// Instantiate and display the image popup window
 			imagePopupWindow = new PopupWindow(imagePopupContainer, 600, 900, true);
 			imagePopupWindow.setOnDismissListener(this);
 			imagePopupWindow.showAtLocation(getCurrentFocus(), Gravity.CENTER, 0, 0);
 		}
 	}
 	
+	// Scales the bitmap image to a size appropriate for the popup window
 	private Bitmap scaleImage(Bitmap image_, float newWidth, float newHeight) {
 		if (image_ == null) {
 			return null;
@@ -163,7 +164,7 @@ public class GalleryActivity extends ListActivity implements OnClickListener, On
 		return Bitmap.createBitmap(image_, 0, 0, width, height, matrix, true);
 	}
 
-	@Override
+	// Callback function that executes in response to the actions of the buttons on the image popup window
 	public void onClick(View v) {
 		popupButtonPressed = (Button) v;
 		popupButtonText = popupButtonPressed.getText().toString();
@@ -196,18 +197,15 @@ public class GalleryActivity extends ListActivity implements OnClickListener, On
 		}
 	}
 
-	@Override
+	// Callback function that gets executed whenever the image popup window is closed (dismissed)
 	public void onDismiss() {
-		/*  Removing views from image popup container to avoid the exception that gets
-		 *  thrown when trying to add views that already have a parent
-		 */
+		// Removing views from image popup container to avoid the exception that gets
+		// thrown when trying to add views that already have a parent
 		imagePopupContainer.removeView(selectedImage);
 		imagePopupContainer.removeView(editImageText);
 		imagePopupContainer.removeView(buttonContainer);
 		
-		/*  Refresh ArrayAdapter so we won't click on a list item that still references a previously
-		 *  deleted image 
-		 */
+		// Refresh ArrayAdapter so we won't click on a list item that still references a previously deleted image 
 		imageList = imageDirectory.list();
 		myAdapter.clear();
 		myAdapter.addAll(imageList);
